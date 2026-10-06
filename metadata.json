@@ -1,0 +1,6 @@
+{
+  "name": "JSON Flow Viewer",
+  "description": "Turn any JSON into an interactive visual flow map. Zoom, pan, search, inspect values, and navigate complex data structures with clarity.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
