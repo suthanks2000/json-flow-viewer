@@ -213,8 +213,8 @@ export const FlowViewer: React.FC<FlowViewerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, searchQuery]);
 
-  // Fit graph into visible screen
-  const handleFitToScreen = useCallback(() => {
+  // Fit graph into visible screen (with comfortable minimum scale so nodes never become tiny ants)
+  const handleFitToScreen = useCallback((forceComfortable = false) => {
     if (!containerRef.current || positionedNodes.length === 0) return;
     const cw = containerRef.current.clientWidth;
     const ch = containerRef.current.clientHeight;
@@ -222,33 +222,69 @@ export const FlowViewer: React.FC<FlowViewerProps> = ({
     const graphWidth = bounds.width;
     const graphHeight = bounds.height;
 
-    const padding = 100;
+    const padding = 80;
     const scaleX = (cw - padding) / Math.max(graphWidth, 200);
     const scaleY = (ch - padding) / Math.max(graphHeight, 200);
 
-    const fitScale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.25), 1.2);
+    // If comfortable mode, keep scale at 0.85 - 1.05 so every node is crisp and readable
+    const fitScale = forceComfortable 
+      ? 0.9
+      : Math.min(Math.max(Math.min(scaleX, scaleY), 0.72), 1.15);
+
     setScale(fitScale);
 
-    // Center layout
-    const newPanX = (cw - graphWidth * fitScale) / 2 - bounds.minX * fitScale;
-    const newPanY = (ch - graphHeight * fitScale) / 2 - bounds.minY * fitScale;
+    // Center root and main branches pleasantly
+    const rootNode = positionedNodes.find((n) => n.id === rootId) || positionedNodes[0];
+    if (rootNode && fitScale >= 0.7) {
+      setPan({ x: 60, y: Math.max(40, (ch - rootNode.height * fitScale) / 2) });
+    } else {
+      const newPanX = (cw - graphWidth * fitScale) / 2 - bounds.minX * fitScale;
+      const newPanY = (ch - graphHeight * fitScale) / 2 - bounds.minY * fitScale;
+      setPan({ x: Math.max(30, newPanX), y: Math.max(30, newPanY) });
+    }
+  }, [bounds, positionedNodes, rootId]);
 
-    setPan({ x: newPanX, y: newPanY });
-  }, [bounds, positionedNodes.length]);
+  // Initial load: For complex JSON (> 12 nodes), automatically collapse depth >= 3 so top hierarchy is clean and simple!
+  useEffect(() => {
+    if (nodesMap.size > 14) {
+      const initialCollapsed = new Set<string>();
+      nodesMap.forEach((n) => {
+        if (n.depth >= 3 && n.childIds.length > 0 && n.id !== rootId) {
+          initialCollapsed.add(n.id);
+        }
+      });
+      setCollapsedSet(initialCollapsed);
+    }
+  }, [rootId, nodesMap]);
 
   // Initial fit to screen once loaded
   useEffect(() => {
     if (positionedNodes.length > 0) {
-      handleFitToScreen();
+      handleFitToScreen(true);
     }
   }, [rootId]);
 
   // Zoom controls
   const handleZoomIn = () => setScale((s) => Math.min(s * 1.25, 2.5));
-  const handleZoomOut = () => setScale((s) => Math.max(s / 1.25, 0.2));
+  const handleZoomOut = () => setScale((s) => Math.max(s / 1.25, 0.3));
   const handleResetZoom = () => {
     setScale(1);
-    setPan({ x: 80, y: 80 });
+    setPan({ x: 60, y: 60 });
+    onShowToast('Reset to 100% comfortable zoom', 'info');
+  };
+
+  // Simplify View for complex JSON
+  const handleSimplifyView = () => {
+    const newSet = new Set<string>();
+    nodesMap.forEach((n) => {
+      if (n.depth >= 2 && n.childIds.length > 0 && n.id !== rootId) {
+        newSet.add(n.id);
+      }
+    });
+    setCollapsedSet(newSet);
+    setScale(0.95);
+    setPan({ x: 60, y: 60 });
+    onShowToast('Simplified view: showing top-level categories', 'info');
   };
 
   // Expand / Collapse all

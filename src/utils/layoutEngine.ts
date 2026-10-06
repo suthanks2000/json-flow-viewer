@@ -13,13 +13,13 @@ export interface LayoutResult {
   };
 }
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 74;
-const GAP_X_HORIZONTAL = 80;
-const GAP_Y_HORIZONTAL = 28;
+const NODE_WIDTH = 248;
+const NODE_HEIGHT = 80;
+const GAP_X_HORIZONTAL = 96;
+const GAP_Y_HORIZONTAL = 32;
 
-const GAP_X_VERTICAL = 36;
-const GAP_Y_VERTICAL = 84;
+const GAP_X_VERTICAL = 48;
+const GAP_Y_VERTICAL = 96;
 
 export function computeGraphLayout(
   nodesMap: Map<string, FlowGraphNode>,

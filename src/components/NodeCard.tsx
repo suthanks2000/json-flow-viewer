@@ -113,10 +113,10 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="shrink-0">{typeConfig.icon}</span>
           <span
-            className={`text-xs font-semibold truncate ${
+            className={`text-[13px] font-semibold tracking-tight truncate ${
               node.isArrayItem
                 ? 'font-mono text-purple-600 dark:text-purple-400'
-                : 'text-neutral-900 dark:text-neutral-100'
+                : 'text-neutral-950 dark:text-neutral-50'
             }`}
             title={node.path || node.displayKey}
           >
@@ -131,27 +131,27 @@ export const NodeCard: React.FC<NodeCardProps> = ({
               e.stopPropagation();
               onToggleCollapse(node.id);
             }}
-            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors shrink-0"
+            className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 transition-colors shrink-0"
             title={node.collapsed ? 'Expand branch' : 'Collapse branch'}
             aria-label={node.collapsed ? 'Expand branch' : 'Collapse branch'}
           >
             {node.collapsed ? (
-              <ChevronRight className="w-3.5 h-3.5 text-blue-500" />
+              <ChevronRight className="w-4 h-4 text-blue-600 dark:text-blue-400 font-bold" />
             ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className="w-4 h-4" />
             )}
           </button>
         )}
       </div>
 
       {/* Node Bottom Row: Value or Child Count */}
-      <div className="flex items-center justify-between text-[11px] gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/60">
-        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 truncate">
-          <span>{typeConfig.label}</span>
+      <div className="flex items-center justify-between text-xs gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80">
+        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400 truncate text-[11px]">
+          <span className="font-medium">{typeConfig.label}</span>
           {node.type === 'object' && (
             <>
               <span aria-hidden="true">·</span>
-              <span className="font-mono tabular-nums">
+              <span className="font-mono tabular-nums font-medium">
                 {node.childCount} {node.childCount === 1 ? 'prop' : 'props'}
               </span>
             </>
@@ -159,7 +159,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           {node.type === 'array' && (
             <>
               <span aria-hidden="true">·</span>
-              <span className="font-mono tabular-nums">
+              <span className="font-mono tabular-nums font-medium">
                 {node.childCount} {node.childCount === 1 ? 'item' : 'items'}
               </span>
             </>
@@ -169,7 +169,7 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         {/* Primitive Value Preview or Collapsed Count */}
         {node.isLeaf ? (
           <span
-            className={`font-mono text-[11px] truncate max-w-[100px] ${
+            className={`font-mono text-[11px] font-medium truncate max-w-[125px] ${
               node.type === 'string'
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : node.type === 'number'
@@ -184,7 +184,13 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           </span>
         ) : (
           node.collapsed && (
-            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+            <span 
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse(node.id);
+              }}
+              className="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-900/60 hover:bg-blue-100 cursor-pointer shadow-2xs"
+            >
               +{node.childCount} hidden
             </span>
           )

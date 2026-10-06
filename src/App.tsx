@@ -9,7 +9,9 @@ import {
   Workflow, 
   PanelLeftClose, 
   PanelLeftOpen, 
-  Maximize2 
+  Maximize2,
+  Braces,
+  Sparkles
 } from 'lucide-react';
 import { 
   JsonParseResult, 
@@ -22,6 +24,7 @@ import { validateAndParseJson, buildJsonGraph } from './utils/jsonParser';
 import { SAMPLE_DATASETS, SampleItem } from './utils/samples';
 import { Header } from './components/Header';
 import { JsonEditor } from './components/JsonEditor';
+import { JsonBuilderView } from './components/JsonBuilderView';
 import { FlowViewer } from './components/FlowViewer';
 import { EmptyState } from './components/EmptyState';
 import { Toast } from './components/Toast';
@@ -51,11 +54,14 @@ export default function App() {
   // Layout flow direction
   const [direction, setDirection] = useState<LayoutDirection>('horizontal');
 
-  // Desktop workspace panel collapse (can collapse editor to give 100% space to Flow Map)
+  // Left panel view mode: 'builder' (Romba easy visual tree/form) or 'code' (raw text editor)
+  const [editorMode, setEditorMode] = useState<'builder' | 'code'>('builder');
+
+  // Desktop workspace panel collapse (can collapse left panel to give 100% space to Flow Map)
   const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
 
-  // Mobile active tab ('editor' | 'flow')
-  const [mobileTab, setMobileTab] = useState<'editor' | 'flow'>('flow');
+  // Mobile active tab ('builder' | 'code' | 'flow')
+  const [mobileTab, setMobileTab] = useState<'builder' | 'code' | 'flow'>('flow');
 
   // Shortcuts modal
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -108,13 +114,25 @@ export default function App() {
     try {
       const built = buildJsonGraph(parseResult.parsedData);
       setGraphData(built);
-      addToast(`Visualized ${built.stats.totalNodes} nodes successfully`, 'success');
+      addToast(`Visualized ${built.stats.totalNodes} nodes in Flow Map`, 'success');
       // If on mobile, switch to Flow tab
       setMobileTab('flow');
     } catch (err: any) {
       addToast(`Failed to build graph: ${err.message}`, 'error');
     }
   }, [parseResult, addToast]);
+
+  // Handle updates from Visual Builder
+  const handleBuilderChange = useCallback((updatedObj: any) => {
+    try {
+      const formatted = JSON.stringify(updatedObj, null, 2);
+      setJsonInput(formatted);
+      const built = buildJsonGraph(updatedObj);
+      setGraphData(built);
+    } catch (err: any) {
+      console.error(err);
+    }
+  }, []);
 
   // Action: Load Sample
   const handleSelectSample = useCallback((sample: SampleItem) => {
@@ -153,30 +171,43 @@ export default function App() {
       />
 
       {/* Mobile Tab Switcher */}
-      <div className="lg:hidden flex items-center justify-around border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1.5 shrink-0 z-20">
+      <div className="lg:hidden flex items-center justify-around border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-1 shrink-0 z-20">
         <button
-          onClick={() => setMobileTab('editor')}
+          onClick={() => setMobileTab('builder')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-            mobileTab === 'editor'
-              ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-semibold'
+            mobileTab === 'builder'
+              ? 'bg-neutral-100 dark:bg-neutral-800 text-blue-600 dark:text-blue-400 font-semibold shadow-2xs'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
-          aria-label="Switch to JSON Editor"
+          aria-label="Switch to Easy Builder"
         >
-          <Code2 className="w-3.5 h-3.5 text-blue-500" />
-          <span>JSON Editor</span>
+          <Braces className="w-3.5 h-3.5" />
+          <span>Easy View</span>
+        </button>
+
+        <button
+          onClick={() => setMobileTab('code')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            mobileTab === 'code'
+              ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-semibold shadow-2xs'
+              : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
+          }`}
+          aria-label="Switch to Code Editor"
+        >
+          <Code2 className="w-3.5 h-3.5" />
+          <span>Raw Code</span>
         </button>
 
         <button
           onClick={() => setMobileTab('flow')}
           className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
             mobileTab === 'flow'
-              ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-semibold'
+              ? 'bg-neutral-100 dark:bg-neutral-800 text-purple-600 dark:text-purple-400 font-semibold shadow-2xs'
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200'
           }`}
           aria-label="Switch to Flow Map"
         >
-          <Workflow className="w-3.5 h-3.5 text-purple-500" />
+          <Workflow className="w-3.5 h-3.5" />
           <span>Flow Map</span>
           {graphData && (
             <span className="text-[10px] font-mono text-neutral-400 dark:text-neutral-500">
@@ -188,24 +219,71 @@ export default function App() {
 
       {/* Main Workspace Split Layout */}
       <main className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel: JSON Editor */}
+        {/* Left Panel: JSON Editor or Easy Visual Builder */}
         <div
-          className={`h-full border-r border-neutral-200 dark:border-neutral-800 transition-all duration-200 ${
+          className={`h-full border-r border-neutral-200 dark:border-neutral-800 transition-all duration-200 flex flex-col ${
             // Mobile responsive visibility
-            mobileTab === 'editor' ? 'flex flex-col w-full' : 'hidden lg:flex flex-col'
+            mobileTab === 'builder' || mobileTab === 'code' ? 'w-full flex' : 'hidden lg:flex'
           } ${
             // Desktop width control
-            isEditorCollapsed ? 'lg:w-0 lg:hidden' : 'lg:w-[420px] xl:w-[480px] shrink-0'
+            isEditorCollapsed ? 'lg:w-0 lg:hidden' : 'lg:w-[460px] xl:w-[520px] shrink-0'
           }`}
         >
-          <JsonEditor
-            value={jsonInput}
-            onChange={setJsonInput}
-            parseResult={parseResult}
-            onVisualize={handleVisualize}
-            onSelectSample={handleSelectSample}
-            onShowToast={addToast}
-          />
+          {/* Mode Switcher on Desktop: Easy Builder vs Raw Code */}
+          <div className="hidden lg:flex items-center justify-between px-3 py-1.5 bg-neutral-100/70 dark:bg-neutral-950/70 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center gap-1 p-0.5 bg-neutral-200/60 dark:bg-neutral-800/80 rounded-lg">
+              <button
+                onClick={() => setEditorMode('builder')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  editorMode === 'builder'
+                    ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 font-semibold shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                }`}
+              >
+                <Braces className="w-3.5 h-3.5" />
+                <span>Easy Builder</span>
+              </button>
+
+              <button
+                onClick={() => setEditorMode('code')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                  editorMode === 'code'
+                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white font-semibold shadow-xs'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white'
+                }`}
+              >
+                <Code2 className="w-3.5 h-3.5" />
+                <span>Raw Code</span>
+              </button>
+            </div>
+
+            <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-medium">
+              {editorMode === 'builder' ? 'Visual Form Editor' : 'Syntax Editor'}
+            </span>
+          </div>
+
+          {/* Render Active View */}
+          <div className="flex-1 h-full overflow-hidden">
+            {/* Show Easy Builder */}
+            {((editorMode === 'builder' && mobileTab !== 'code') || mobileTab === 'builder') ? (
+              <JsonBuilderView
+                data={parseResult.parsedData}
+                onChange={handleBuilderChange}
+                onVisualize={handleVisualize}
+                onShowToast={addToast}
+              />
+            ) : (
+              /* Show Raw JSON Editor */
+              <JsonEditor
+                value={jsonInput}
+                onChange={setJsonInput}
+                parseResult={parseResult}
+                onVisualize={handleVisualize}
+                onSelectSample={handleSelectSample}
+                onShowToast={addToast}
+              />
+            )}
+          </div>
         </div>
 
         {/* Panel Collapse Toggle Button (Desktop only) */}
@@ -219,8 +297,8 @@ export default function App() {
             className={`p-1.5 rounded-r-md bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-md text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-all ${
               isEditorCollapsed ? 'left-0 absolute' : ''
             }`}
-            title={isEditorCollapsed ? 'Show JSON Editor' : 'Collapse JSON Editor'}
-            aria-label={isEditorCollapsed ? 'Expand JSON Editor' : 'Collapse JSON Editor'}
+            title={isEditorCollapsed ? 'Show Editor' : 'Collapse Editor'}
+            aria-label={isEditorCollapsed ? 'Expand Editor' : 'Collapse Editor'}
           >
             {isEditorCollapsed ? (
               <PanelLeftOpen className="w-3.5 h-3.5 text-blue-500" />
